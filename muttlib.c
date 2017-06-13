@@ -1780,7 +1780,6 @@ void mutt_get_parent_path(char *output, char *path, size_t olen)
   }
 }
 
-char debugfilename[_POSIX_PATH_MAX];
 FILE *debugfile = NULL;
 int debuglevel;
 char *debugfile_cmdline = NULL;
