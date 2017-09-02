@@ -37,6 +37,8 @@
 #include <unistd.h>
 #include <wchar.h>
 #include "mutt/mutt.h"
+#include "config/dump.h"
+#include "config/lib.h"
 #include "config/mbtable.h"
 #include "config/sort.h"
 #include "config/types.h"
@@ -2238,65 +2240,6 @@ static void restore_default(struct Option *p)
 #endif
   if (p->flags & R_MENU)
     mutt_set_current_menu_redraw_full();
-}
-
-static void esc_char(char c, char *p, char *dst, size_t len)
-{
-  *p++ = '\\';
-  if (p - dst < len)
-    *p++ = c;
-}
-
-static size_t escape_string(char *dst, size_t len, const char *src)
-{
-  char *p = dst;
-
-  if (!len)
-    return 0;
-  len--; /* save room for \0 */
-  while (p - dst < len && src && *src)
-  {
-    switch (*src)
-    {
-      case '\n':
-        esc_char('n', p, dst, len);
-        break;
-      case '\r':
-        esc_char('r', p, dst, len);
-        break;
-      case '\t':
-        esc_char('t', p, dst, len);
-        break;
-      default:
-        if ((*src == '\\' || *src == '"') && p - dst < len - 1)
-          *p++ = '\\';
-        *p++ = *src;
-    }
-    src++;
-  }
-  *p = '\0';
-  return p - dst;
-}
-
-static void pretty_var(char *dst, size_t len, const char *option, const char *val)
-{
-  char *p = NULL;
-
-  if (!len)
-    return;
-
-  mutt_str_strfcpy(dst, option, len);
-  len--; /* save room for \0 */
-  p = dst + mutt_str_strlen(dst);
-
-  if (p - dst < len)
-    *p++ = '=';
-  if (p - dst < len)
-    *p++ = '"';
-  p += escape_string(p, len - (p - dst) + 1, val); /* \0 terminate it */
-  if (p - dst < len)
-    *p++ = '"';
-  *p = '\0';
 }
 
 static int check_charset(struct Option *opt, const char *val)

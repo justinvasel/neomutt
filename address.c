@@ -55,6 +55,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "mutt/mutt.h"
+#include "config/address.h"
 #include "address.h"
 #include "mutt_idna.h"
 

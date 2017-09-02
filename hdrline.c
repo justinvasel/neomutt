@@ -31,10 +31,10 @@
 #include <string.h>
 #include <time.h>
 #include "mutt/mutt.h"
+#include "config/lib.h"
 #include "config/mbtable.h"
 #include "config/sort.h"
 #include "mutt.h"
-#include "address.h"
 #include "body.h"
 #include "context.h"
 #include "envelope.h"
@@ -56,7 +56,7 @@
 /**
  * enum FlagChars - Index into the FlagChars variable ($flag_chars)
  */
-enum FlagChars
+enum FlagCharsTypes
 {
   FlagCharTagged,
   FlagCharImportant,

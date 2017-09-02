@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "mutt/mutt.h"
+#include "config/lib.h"
 #include "mutt_idna.h"
 #include "address.h"
 #include "envelope.h"
