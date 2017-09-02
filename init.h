@@ -29,6 +29,9 @@
 #include "doc/makedoc_defs.h"
 #else
 #include <stddef.h>
+#include "config/sort.h"
+#include "config/types.h"
+#include "conn/conn.h"
 #include "mutt.h"
 #include "buffy.h"
 #include "globals.h"
@@ -40,8 +43,6 @@
 #include "options.h"
 #include "protos.h"
 #include "sort.h"
-#include "conn/conn.h"
-#include "tags.h"
 #ifdef USE_LUA
 #include "mutt_lua.h"
 #endif
