@@ -27,63 +27,8 @@
 #ifndef _MUTT_REGEX_H
 #define _MUTT_REGEX_H
 
-#include <regex.h>
+#include "config/regex2.h"
 #include "where.h"
-
-/* this is a non-standard option supported by Solaris 2.5.x which allows
- * patterns of the form \<...\>
- */
-#ifndef REG_WORDS
-#define REG_WORDS 0
-#endif
-
-/**
- * REGCOMP - Compile a regular expression
- * @param X regex_t struct to fill
- * @param Y Regular expression string
- * @param Z Flags
- * @retval   0 Success
- * @retval num Failure, e.g. REG_BADPAT
- */
-#define REGCOMP(X, Y, Z) regcomp(X, Y, REG_WORDS | REG_EXTENDED | (Z))
-/**
- * REGEXEC - Perform a regular expression comparison
- * @param X regex_t containing compiled regular expression
- * @param Y String to compare
- * @retval 0           Success
- * @retval REG_NOMATCH Failure
- */
-#define REGEXEC(X, Y) regexec(&X, Y, (size_t) 0, (regmatch_t *) 0, (int) 0)
-
-/**
- * struct Regex - Cached regular expression
- */
-struct Regex
-{
-  char *pattern;  /**< printable version */
-  regex_t *regex; /**< compiled expression */
-  bool not : 1;   /**< do not match */
-};
-
-/**
- * struct RegexList - List of regular expressions
- */
-struct RegexList
-{
-  struct Regex *regex;
-  struct RegexList *next;
-};
-
-/**
- * struct ReplaceList - List of regular expressions
- */
-struct ReplaceList
-{
-  struct Regex *regex;
-  int nmatch;
-  char *template;
-  struct ReplaceList *next;
-};
 
 /* These variables are backing for config items */
 WHERE struct Regex *GecosMask;
