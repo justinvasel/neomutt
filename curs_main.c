@@ -953,6 +953,13 @@ int mutt_index_menu(void)
    * want to lose. */
   SigWinch = 0;
 
+  /* Show the notifications screen, if there is any, just once */
+  if (option(OPT_SHOW_NOTIFICATIONS) && mutt_has_notifications())
+  {
+    mutt_notifications_show();
+  }
+  unset_option(OPT_SHOW_NOTIFICATIONS);
+
   while (true)
   {
     /* Clear the tag prefix unless we just started it.  Don't clear

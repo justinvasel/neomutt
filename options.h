@@ -274,6 +274,7 @@ enum GlobalBool
   OPT_NM_RECORD,
 #endif
 
+  OPT_SHOW_NOTIFICATIONS,
   OPT_GLOBAL_MAX
 };
 
