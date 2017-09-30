@@ -181,11 +181,6 @@ AC_ARG_WITH(mailpath,
 	AS_HELP_STRING([--with-mailpath=DIR],[Directory where spool mailboxes are located]),
 	[with_mailpath=$withval], [with_mailpath=/var/mail])
 
-AC_ARG_WITH(docdir,
-	AS_HELP_STRING([--with-docdir=PATH],[Specify where to put the documentation]),
-	[mutt_cv_docdir=$withval],
-	[mutt_cv_docdir='${datarootdir}/doc/neomutt'])
-
 AC_ARG_WITH(domain,
 	AS_HELP_STRING([--with-domain=DOMAIN],[Specify your DNS domain name]),
 	[with_domain=$withval],[with_domain=no])
@@ -218,7 +213,7 @@ AS_IF([test x$use_pgp != "xno"], [
 dnl --enable-smime
 AS_IF([test x$use_smime != "xno"], [
 	AC_DEFINE(CRYPT_BACKEND_CLASSIC_SMIME, 1, [Define if you want classic S/MIME support.])
-	SMIMEAUX_TARGET='$(srcdir)/contrib/smime_keys'
+	SMIMEAUX_TARGET='$(srcdir)/misc/smime_keys'
 	build_ncrypt_smime="yes"
 ])
 
@@ -459,13 +454,6 @@ if test -z "$datarootdir"; then
 	datarootdir='${prefix}/share'
 fi
 AC_SUBST([datarootdir])
-
-AC_MSG_CHECKING(where to put the documentation)
-AC_MSG_RESULT($mutt_cv_docdir)
-if test -z "$docdir" -o -n "$with_docdir"; then
-	docdir=$mutt_cv_docdir
-fi
-AC_SUBST(docdir)
 
 if test $with_domain != yes -a $with_domain != no; then
 	AC_DEFINE_UNQUOTED(DOMAIN,"$withval",[Define your domain name.])
@@ -916,13 +904,6 @@ AS_IF([test $have_fmemopen = "yes" && test $use_fmemopen = "yes"],
 	[use_fmemopen=no]
 )
 
-AC_ARG_ENABLE(doc, AS_HELP_STRING([--disable-doc],[Do not build the documentation]),
-[	if test x$enableval = xno; then
-		do_build_doc=no
-	fi
-])
-AM_CONDITIONAL(BUILD_DOC, test x$do_build_doc != xno)
-
 AC_ARG_ENABLE(po, AS_HELP_STRING([--disable-po],[Do not build the translation messages]),
 [	if test x$enableval = xno; then
 		do_build_po=no
@@ -930,17 +911,7 @@ AC_ARG_ENABLE(po, AS_HELP_STRING([--disable-po],[Do not build the translation me
 ])
 AM_CONDITIONAL(BUILD_PO, test x$do_build_po != xno)
 
-AC_ARG_ENABLE(full_doc,
-	AS_HELP_STRING([--disable-full-doc],[Omit disabled variables]),
-[	if test x$enableval = xno; then
-		full_doc=no
-	fi
-])
-if test x$full_doc != xno; then
-	AC_DEFINE(MAKEDOC_FULL,1, [Define if you want complete documentation.])
-fi
-
-AC_CONFIG_FILES(Makefile contrib/Makefile doc/Makefile imap/Makefile
+AC_CONFIG_FILES(Makefile imap/Makefile
 	m4/Makefile po/Makefile.in hcache/Makefile ncrypt/Makefile mutt/Makefile conn/Makefile)
 AC_OUTPUT
 
