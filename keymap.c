@@ -788,6 +788,7 @@ void km_init(void)
   create_bindings(OpPost, MENU_POST);
   create_bindings(OpQuery, MENU_QUERY);
   create_bindings(OpAlias, MENU_ALIAS);
+  create_bindings(OpNotifications, MENU_NOTIFICATIONS);
 
   if ((WithCrypto & APPLICATION_PGP))
     create_bindings(OpPgp, MENU_PGP);
@@ -1065,7 +1066,8 @@ const struct Binding *km_get_table(int menu)
       return OpEditor;
     case MENU_QUERY:
       return OpQuery;
-
+    case MENU_NOTIFICATIONS:
+      return OpNotifications;
     case MENU_PGP:
       return (WithCrypto & APPLICATION_PGP) ? OpPgp : NULL;
 
