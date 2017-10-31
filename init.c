@@ -82,6 +82,12 @@
     return -1;                                                                       \
   }
 
+/* LIFO designed to contain the list of config files that have been sourced and
+ * avoid cyclic sourcing */
+static struct ListHead MuttrcStack = STAILQ_HEAD_INITIALIZER(MuttrcStack);
+
+#define MAXERRS 128
+
 /**
  * struct MyVar - A user-set variable
  */
@@ -177,61 +183,11 @@ static int toggle_quadoption(int opt)
 
 static int parse_regex(int idx, struct Buffer *tmp, struct Buffer *err)
 {
-  int e, flags = 0;
-  const char *p = NULL;
-  regex_t *rx = NULL;
-  struct Regex *ptr = *(struct Regex **) MuttVars[idx].var;
+  const char *name = MuttVars[idx].name;
 
-  if (ptr)
-  {
-    /* Same pattern as we already have */
-    if (mutt_str_strcmp(ptr->pattern, tmp->data) != 0)
-      return 0;
-  }
-  else
-  {
-    ptr = mutt_mem_calloc(1, sizeof(struct Regex *));
-  }
+  int rc = cs_str_string_set(Config, name, tmp->data, err);
 
-  bool not = false;
-
-  /* Should we use smart case matching? */
-  if (((MuttVars[idx].flags & DT_REGEX_MATCH_CASE) == 0) && mutt_mb_is_lower(tmp->data))
-    flags |= REG_ICASE;
-
-  p = tmp->data;
-  /* Is a prefix of '!' allowed? */
-  if ((MuttVars[idx].flags & DT_REGEX_ALLOW_NOT) != 0)
-  {
-    if (*p == '!')
-    {
-      not = true;
-      p++;
-    }
-  }
-
-  rx = mutt_mem_malloc(sizeof(regex_t));
-  e = REGCOMP(rx, p, flags);
-  if (e != 0)
-  {
-    regerror(e, rx, err->data, err->dsize);
-    FREE(&rx);
-    return 0;
-  }
-
-  /* get here only if everything went smoothly */
-  if (ptr->pattern)
-  {
-    FREE(&ptr->pattern);
-    regfree((regex_t *) ptr->regex);
-    FREE(&ptr->regex);
-  }
-
-  ptr->pattern = mutt_str_strdup(tmp->data);
-  ptr->regex = rx;
-  ptr->not = not;
-
-  return 1;
+  return (CSR_RESULT(rc) == CSR_SUCCESS);
 }
 
 int query_quadoption(int opt, const char *prompt)
@@ -273,7 +229,7 @@ int mutt_option_index(const char *s)
 }
 
 #ifdef USE_LUA
-int mutt_option_to_string(const struct Option *opt, char *val, size_t len)
+int mutt_option_to_string(const struct ConfigDef *opt, char *val, size_t len)
 {
   mutt_debug(2, " * mutt_option_to_string(%s)\n", NONULL((char *) opt->var));
   int idx = mutt_option_index((const char *) opt->name);
@@ -282,7 +238,7 @@ int mutt_option_to_string(const struct Option *opt, char *val, size_t len)
   return 0;
 }
 
-bool mutt_option_get(const char *s, struct Option *opt)
+bool mutt_option_get(const char *s, struct ConfigDef *opt)
 {
   mutt_debug(2, " * mutt_option_get(%s)\n", s);
   int idx = mutt_option_index(s);
@@ -391,7 +347,7 @@ static int parse_sort(short *val, const char *s, const struct Mapping *map, stru
 }
 
 #ifdef USE_LUA
-int mutt_option_set(const struct Option *val, struct Buffer *err)
+int mutt_option_set(const struct ConfigDef *val, struct Buffer *err)
 {
   mutt_debug(2, " * mutt_option_set()\n");
   int idx = mutt_option_index(val->name);
@@ -516,10 +472,10 @@ int mutt_option_set(const struct Option *val, struct Buffer *err)
           *(bool *) MuttVars[idx].var = false;
         break;
       case DT_QUAD:
-        *(short *) MuttVars[idx].var = val->var;
+        *(short *) MuttVars[idx].var = *(short *) val->var;
         break;
       case DT_NUMBER:
-        *(short *) MuttVars[idx].var = val->var;
+        *(short *) MuttVars[idx].var = *(short *) val->var;
         break;
       default:
         return -1;
@@ -734,7 +690,8 @@ int mutt_extract_token(struct Buffer *dest, struct Buffer *tok, int flags)
   return 0;
 }
 
-static void free_opt(struct Option *p)
+#if 0
+static void free_opt(struct ConfigDef *p)
 {
   struct Regex **pp = NULL;
 
@@ -758,12 +715,15 @@ static void free_opt(struct Option *p)
       break;
   }
 }
+#endif
 
 /**
  * mutt_free_opts - clean up before quitting
  */
 void mutt_free_opts(void)
 {
+  mutt_list_free(&MuttrcStack);
+#if 0
   for (int i = 0; MuttVars[i].name; i++)
     free_opt(MuttVars + i);
 
@@ -774,6 +734,7 @@ void mutt_free_opts(void)
   mutt_free_regex_list(&SubscribedLists);
   mutt_free_regex_list(&UnSubscribedLists);
   mutt_free_regex_list(&NoSpamList);
+#endif
 }
 
 static void add_to_stailq(struct ListHead *head, const char *str)
@@ -2081,42 +2042,7 @@ static int parse_my_hdr(struct Buffer *buf, struct Buffer *s,
   return 0;
 }
 
-static void set_default(struct Option *p)
-{
-  switch (DTYPE(p->type))
-  {
-    case DT_STRING:
-      if (!p->initial && *((char **) p->var))
-        p->initial = (unsigned long) mutt_str_strdup(*((char **) p->var));
-      break;
-    case DT_PATH:
-      if (!p->initial && *((char **) p->var))
-      {
-        char *cp = mutt_str_strdup(*((char **) p->var));
-        /* mutt_pretty_mailbox (cp); */
-        p->initial = (unsigned long) cp;
-      }
-      break;
-    case DT_ADDRESS:
-      if (!p->initial && *((struct Address **) p->var))
-      {
-        char tmp[HUGE_STRING];
-        *tmp = '\0';
-        rfc822_write_address(tmp, sizeof(tmp), *((struct Address **) p->var), 0);
-        p->initial = (unsigned long) mutt_str_strdup(tmp);
-      }
-      break;
-    case DT_REGEX:
-    {
-      struct Regex *pp = (struct Regex *) p->var;
-      if (!p->initial && pp->pattern)
-        p->initial = (unsigned long) mutt_str_strdup(pp->pattern);
-      break;
-    }
-  }
-}
-
-static void restore_default(struct Option *p)
+static void restore_default(struct ConfigDef *p)
 {
   switch (DTYPE(p->type))
   {
@@ -2242,7 +2168,7 @@ static void restore_default(struct Option *p)
     mutt_set_current_menu_redraw_full();
 }
 
-static int check_charset(struct Option *opt, const char *val)
+static int check_charset(struct ConfigDef *opt, const char *val)
 {
   char *q = NULL, *s = mutt_str_strdup(val);
   int rc = 0;
@@ -2707,13 +2633,9 @@ static int parse_set(struct Buffer *tmp, struct Buffer *s, unsigned long data,
                            "the cmdline"));
             break;
           }
-          /* MuttVars[idx].var is already 'char**' (or some 'void**') or...
-           * so cast to 'void*' is okay */
-          FREE((void *) MuttVars[idx].var);
-
           mutt_str_strfcpy(scratch, tmp->data, sizeof(scratch));
           mutt_expand_path(scratch, sizeof(scratch));
-          *((char **) MuttVars[idx].var) = mutt_str_strdup(scratch);
+          cs_str_string_set(Config, MuttVars[idx].name, scratch, NULL);
           if (mutt_str_strcmp(MuttVars[idx].name, "debug_file") == 0)
             restart_debug();
         }
@@ -2730,8 +2652,7 @@ static int parse_set(struct Buffer *tmp, struct Buffer *s, unsigned long data,
             return -1;
           }
 
-          FREE((void *) MuttVars[idx].var);
-          *((char **) MuttVars[idx].var) = mutt_str_strdup(tmp->data);
+          cs_str_string_set(Config, MuttVars[idx].name, tmp->data, NULL);
           if (mutt_str_strcmp(MuttVars[idx].name, "charset") == 0)
             mutt_set_charset(Charset);
 
@@ -3076,12 +2997,6 @@ static int parse_set(struct Buffer *tmp, struct Buffer *s, unsigned long data,
   }
   return r;
 }
-
-/* LIFO designed to contain the list of config files that have been sourced and
- * avoid cyclic sourcing */
-static struct ListHead MuttrcStack = STAILQ_HEAD_INITIALIZER(MuttrcStack);
-
-#define MAXERRS 128
 
 /**
  * source_rc - Read an initialization file
@@ -3996,6 +3911,25 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   err.data = mutt_mem_malloc(err.dsize);
   err.dptr = err.data;
 
+  Config = cs_create(500);
+
+  address_init(Config);
+  bool_init(Config);
+  magic_init(Config);
+  mbtable_init(Config);
+  number_init(Config);
+  path_init(Config);
+  quad_init(Config);
+  regex_init(Config);
+  sort_init(Config);
+  string_init(Config);
+
+  if (!cs_register_variables(Config, MuttVars))
+  {
+    fprintf(stderr, "cs_register_variables() failed\n");
+    return;
+  }
+
   Groups = mutt_hash_create(1031, 0);
   /* reverse alias keys need to be strdup'ed because of idna conversions */
   ReverseAliases = mutt_hash_create(
@@ -4022,8 +3956,10 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
     if (!HomeDir)
       HomeDir = mutt_str_strdup(pw->pw_dir);
 
-    RealName = mutt_str_strdup(mutt_gecos_name(rnbuf, sizeof(rnbuf), pw));
-    Shell = mutt_str_strdup(pw->pw_shell);
+    cs_set_initial_value(Config, "realname",
+                         mutt_gecos_name(rnbuf, sizeof(rnbuf), pw), NULL);
+    cs_set_initial_value(Config, "shell", pw->pw_shell, NULL);
+
     endpwent();
   }
   else
@@ -4042,7 +3978,8 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
       fputs(_("unable to determine username"), stderr);
       exit(1);
     }
-    Shell = mutt_str_strdup((p = getenv("SHELL")) ? p : "/bin/sh");
+    p = getenv("SHELL");
+    cs_set_initial_value(Config, "shell", p ? p : "/bin/sh", NULL);
   }
 
   /* Start up debugging mode if requested from cmdline */
@@ -4050,15 +3987,8 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   {
     debuglevel = debuglevel_cmdline;
     if (debugfile_cmdline)
-    {
-      DebugFile = mutt_str_strdup(debugfile_cmdline);
-    }
-    else
-    {
-      int i = mutt_option_index("debug_file");
-      if ((i >= 0) && (MuttVars[i].initial != 0))
-        DebugFile = mutt_str_strdup((const char *) MuttVars[i].initial);
-    }
+      cs_set_initial_value(Config, "debug_file", debugfile_cmdline, NULL);
+
     start_debug();
   }
 
@@ -4112,22 +4042,22 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
 #endif
 
 #ifdef USE_NNTP
-  if ((p = getenv("NNTPSERVER")))
+  p = getenv("NNTPSERVER");
+  if (p)
   {
-    FREE(&NewsServer);
-    NewsServer = mutt_str_strdup(p);
+    cs_set_initial_value(Config, "news_server", p, NULL);
   }
   else
   {
     p = mutt_file_read_keyword(SYSCONFDIR "/nntpserver", buffer, sizeof(buffer));
-    NewsServer = mutt_str_strdup(p);
+    cs_set_initial_value(Config, "news_server", p, NULL);
   }
 #endif
 
   if ((p = getenv("MAIL")))
-    SpoolFile = mutt_str_strdup(p);
+    cs_set_initial_value(Config, "spoolfile", p, NULL);
   else if ((p = getenv("MAILDIR")))
-    SpoolFile = mutt_str_strdup(p);
+    cs_set_initial_value(Config, "spoolfile", p, NULL);
   else
   {
 #ifdef HOMESPOOL
@@ -4135,20 +4065,23 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
 #else
     mutt_file_concat_path(buffer, MAILPATH, NONULL(Username), sizeof(buffer));
 #endif
-    SpoolFile = mutt_str_strdup(buffer);
+    cs_set_initial_value(Config, "spoolfile", buffer, NULL);
   }
 
   if ((p = getenv("MAILCAPS")))
-    MailcapPath = mutt_str_strdup(p);
+    cs_set_initial_value(Config, "mailcap_path", p, NULL);
   else
   {
     /* Default search path from RFC1524 */
-    MailcapPath = mutt_str_strdup(
+    cs_set_initial_value(
+        Config, "mailcap_path",
         "~/.mailcap:" PKGDATADIR "/mailcap:" SYSCONFDIR
-        "/mailcap:/etc/mailcap:/usr/etc/mailcap:/usr/local/etc/mailcap");
+        "/mailcap:/etc/mailcap:/usr/etc/mailcap:/usr/local/etc/mailcap",
+        NULL);
   }
 
-  Tmpdir = mutt_str_strdup((p = getenv("TMPDIR")) ? p : "/tmp");
+  p = getenv("TMPDIR");
+  cs_set_initial_value(Config, "tmpdir", p ? p : "/tmp", NULL);
 
   p = getenv("VISUAL");
   if (!p)
@@ -4157,8 +4090,8 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
     if (!p)
       p = "vi";
   }
-  Editor = mutt_str_strdup(p);
-  Visual = mutt_str_strdup(p);
+  cs_set_initial_value(Config, "editor", p, NULL);
+  cs_set_initial_value(Config, "visual", p, NULL);
 
   p = getenv("REPLYTO");
   if (p)
@@ -4178,19 +4111,21 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
 
   p = getenv("EMAIL");
   if (p)
-    From = mutt_addr_parse_list(NULL, p);
+    cs_set_initial_value(Config, "from", p, NULL);
 
   mutt_cs_set_langinfo_charset();
   mutt_set_charset(Charset);
 
   Matches = mutt_mem_calloc(MatchesListsize, sizeof(char *));
 
+#if 0
   /* Set standard defaults */
   for (int i = 0; MuttVars[i].name; i++)
   {
     set_default(&MuttVars[i]);
     restore_default(&MuttVars[i]);
   }
+#endif
 
   CurrentMenu = MENU_MAIN;
 
@@ -4262,8 +4197,7 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
 
   if (!STAILQ_EMPTY(&Muttrc))
   {
-    FREE(&AliasFile);
-    AliasFile = mutt_str_strdup(STAILQ_FIRST(&Muttrc)->data);
+    cs_str_string_set(Config, "alias_file", STAILQ_FIRST(&Muttrc)->data, NULL);
   }
 
   /* Process the global rc file if it exists and the user hasn't explicitly
@@ -4289,6 +4223,7 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
 
       snprintf(buffer, sizeof(buffer), "%s/Muttrc", PKGDATADIR);
     } while (0);
+
     if (access(buffer, F_OK) == 0)
     {
       if (source_rc(buffer, &err) != 0)
@@ -4338,7 +4273,7 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
     {
       if (b->magic == MUTT_NOTMUCH)
       {
-        mutt_str_replace(&SpoolFile, b->path);
+        cs_str_string_set(Config, "spoolfile", b->path, NULL);
         mutt_sb_toggle_virtual();
         break;
       }

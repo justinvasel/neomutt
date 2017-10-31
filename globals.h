@@ -28,6 +28,7 @@
 #include "where.h"
 #include "mutt_regex.h"
 #include "config/address.h"
+#include "config/set.h"
 
 #ifdef MAIN_C
 /* so that global vars get included */
@@ -36,6 +37,8 @@
 #include "ncrypt/ncrypt.h"
 #include "sort.h"
 #endif /* MAIN_C */
+
+WHERE struct ConfigSet *Config;
 
 WHERE struct Context *Context;
 

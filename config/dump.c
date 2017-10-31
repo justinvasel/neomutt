@@ -207,8 +207,8 @@ void dump_config(struct ConfigSet *cs, int style, int flags)
 
     if (defaults)
     {
-      struct Buffer def;
-      mutt_buffer_reset(&def);
+      char b[1024];
+      struct Buffer def = { b, b, sizeof(b), 0 };
       cs_he_default_get(cs, elem, &def);
       char esc[1024];
       escape_string(esc, sizeof(esc), def.data);

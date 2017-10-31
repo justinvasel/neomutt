@@ -468,8 +468,12 @@ int main(int argc, char **argv, char **env)
       mutt_list_insert_tail(&queries, mutt_str_strdup(argv[optind]));
     return mutt_query_variables(&queries);
   }
+
   if (dump_variables)
-    return mutt_dump_variables(hide_sensitive);
+  {
+    dump_config(Config, CS_DUMP_STYLE_MUTT, hide_sensitive ? CS_DUMP_SENSITIVE : 0);
+    return 0;
+  }
 
   if (!STAILQ_EMPTY(&alias_queries))
   {
@@ -934,6 +938,7 @@ int main(int argc, char **argv, char **env)
     mutt_sasl_done();
 #endif
     mutt_free_opts();
+    cs_free(&Config);
     mutt_free_windows();
     mutt_endwin(ErrorBuf);
   }
