@@ -85,10 +85,11 @@ struct ReplaceList
   struct ReplaceList *next;
 };
 
-WHERE struct Regex Mask;
-WHERE struct Regex QuoteRegexp;
-WHERE struct Regex ReplyRegexp;
-WHERE struct Regex Smileys;
-WHERE struct Regex GecosMask;
+/* These variables are backing for config items */
+WHERE struct Regex *GecosMask;
+WHERE struct Regex *Mask;
+WHERE struct Regex *QuoteRegexp;
+WHERE struct Regex *ReplyRegexp;
+WHERE struct Regex *Smileys;
 
 #endif /* _MUTT_REGEX_H */

@@ -51,7 +51,7 @@ WHERE char *Attribution;
 WHERE char *AttributionLocale;
 WHERE char *AttachCharset;
 WHERE char *AttachFormat;
-WHERE struct Regex AttachKeyword;
+WHERE struct Regex *AttachKeyword;
 WHERE char *ComposeFormat;
 WHERE char *ConfigCharset;
 WHERE char *ContentType;
@@ -266,8 +266,8 @@ WHERE struct Alias *Aliases;
 WHERE struct ListHead UserHeader INITVAL(STAILQ_HEAD_INITIALIZER(UserHeader));
 
 /* -- formerly in pgp.h -- */
-WHERE struct Regex PgpGoodSign;
-WHERE struct Regex PgpDecryptionOkay;
+WHERE struct Regex *PgpGoodSign;
+WHERE struct Regex *PgpDecryptionOkay;
 WHERE char *PgpSignAs;
 WHERE short PgpTimeout;
 WHERE char *PgpEntryFormat;
