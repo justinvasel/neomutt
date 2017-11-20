@@ -67,14 +67,12 @@ struct Buffer *mutt_buffer_new(void)
 /**
  * mutt_buffer_init - Initialise a new Buffer
  * @param b Buffer to initialise
- * @retval ptr Initialised Buffer
  *
  * This must not be called on a Buffer that already contains data.
  */
-struct Buffer *mutt_buffer_init(struct Buffer *b)
+void mutt_buffer_init(struct Buffer *b)
 {
   memset(b, 0, sizeof(struct Buffer));
-  return b;
 }
 
 /**
