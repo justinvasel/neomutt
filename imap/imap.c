@@ -1214,17 +1214,10 @@ int imap_exec_msgset(struct ImapData *idata, const char *pre, const char *post,
 {
   struct Header **hdrs = NULL;
   short oldsort;
-  struct Buffer *cmd = NULL;
+  struct Buffer cmd = {0};
   int pos;
   int rc;
   int count = 0;
-
-  cmd = mutt_buffer_new();
-  if (!cmd)
-  {
-    mutt_debug(1, "unable to allocate buffer\n");
-    return -1;
-  }
 
   /* We make a copy of the headers just in case resorting doesn't give
    exactly the original order (duplicate messages?), because other parts of
@@ -1245,13 +1238,13 @@ int imap_exec_msgset(struct ImapData *idata, const char *pre, const char *post,
 
   do
   {
-    cmd->dptr = cmd->data;
-    mutt_buffer_printf(cmd, "%s ", pre);
-    rc = make_msg_set(idata, cmd, flag, changed, invert, &pos);
+    cmd.dptr = cmd.data;
+    mutt_buffer_printf(&cmd, "%s ", pre);
+    rc = make_msg_set(idata, &cmd, flag, changed, invert, &pos);
     if (rc > 0)
     {
-      mutt_buffer_printf(cmd, " %s", post);
-      if (imap_exec(idata, cmd->data, IMAP_CMD_QUEUE))
+      mutt_buffer_printf(&cmd, " %s", post);
+      if (imap_exec(idata, cmd.data, IMAP_CMD_QUEUE))
       {
         rc = -1;
         goto out;
@@ -1263,7 +1256,7 @@ int imap_exec_msgset(struct ImapData *idata, const char *pre, const char *post,
   rc = count;
 
 out:
-  mutt_buffer_free(&cmd);
+  mutt_buffer_deinit(&cmd);
   if (oldsort != Sort)
   {
     Sort = oldsort;
@@ -1916,7 +1909,6 @@ int imap_fast_trash(struct Context *ctx, char *dest)
   int rc;
   struct ImapMbox mx;
   bool triedcreate = false;
-  struct Buffer *sync_cmd = NULL;
   int err_continue = MUTT_NO;
 
   idata = ctx->data;
@@ -1939,13 +1931,13 @@ int imap_fast_trash(struct Context *ctx, char *dest)
     mutt_str_strfcpy(mbox, "INBOX", sizeof(mbox));
   imap_munge_mbox_name(idata, mmbox, sizeof(mmbox), mbox);
 
-  sync_cmd = mutt_buffer_new();
+  struct Buffer sync_cmd = {0};
   for (int i = 0; i < ctx->msgcount; i++)
   {
     if (ctx->hdrs[i]->active && ctx->hdrs[i]->changed &&
         ctx->hdrs[i]->deleted && !ctx->hdrs[i]->purge)
     {
-      rc = imap_sync_message_for_copy(idata, ctx->hdrs[i], sync_cmd, &err_continue);
+      rc = imap_sync_message_for_copy(idata, ctx->hdrs[i], &sync_cmd, &err_continue);
       if (rc < 0)
       {
         mutt_debug(1, "could not sync\n");
@@ -2006,7 +1998,7 @@ int imap_fast_trash(struct Context *ctx, char *dest)
   rc = 0;
 
 out:
-  mutt_buffer_free(&sync_cmd);
+  mutt_buffer_deinit(&sync_cmd);
   FREE(&mx.mbox);
 
   return rc < 0 ? -1 : rc;
@@ -2702,7 +2694,6 @@ static int imap_edit_message_tags(struct Context *ctx, const char *tags, char *b
 static int imap_commit_message_tags(struct Context *ctx, struct Header *h, char *tags)
 {
   struct ImapData *idata = NULL;
-  struct Buffer *cmd = NULL;
   char uid[11];
 
   idata = ctx->data;
@@ -2718,55 +2709,42 @@ static int imap_commit_message_tags(struct Context *ctx, struct Header *h, char 
   /* Remove old custom flags */
   if (HEADER_DATA(h)->flags_remote)
   {
-    cmd = mutt_buffer_new();
-    if (!cmd)
-    {
-      mutt_debug(1, "unable to allocate buffer\n");
-      return -1;
-    }
-    cmd->dptr = cmd->data;
-    mutt_buffer_addstr(cmd, "UID STORE ");
-    mutt_buffer_addstr(cmd, uid);
-    mutt_buffer_addstr(cmd, " -FLAGS.SILENT (");
-    mutt_buffer_addstr(cmd, HEADER_DATA(h)->flags_remote);
-    mutt_buffer_addstr(cmd, ")");
+    struct Buffer cmd = {0};
+    mutt_buffer_addstr(&cmd, "UID STORE ");
+    mutt_buffer_addstr(&cmd, uid);
+    mutt_buffer_addstr(&cmd, " -FLAGS.SILENT (");
+    mutt_buffer_addstr(&cmd, HEADER_DATA(h)->flags_remote);
+    mutt_buffer_addstr(&cmd, ")");
 
     /* Should we return here, or we are fine and we could
      * continue to add new flags *
      */
-    if (imap_exec(idata, cmd->data, 0) != 0)
+    int rc = imap_exec(idata, cmd.data, 0);
+    mutt_buffer_deinit(&cmd);
+    if (rc != 0)
     {
-      mutt_buffer_free(&cmd);
       return -1;
     }
-
-    mutt_buffer_free(&cmd);
   }
 
   /* Add new custom flags */
   if (tags)
   {
-    cmd = mutt_buffer_new();
-    if (!cmd)
-    {
-      mutt_debug(1, "fail to remove old flags\n");
-      return -1;
-    }
-    cmd->dptr = cmd->data;
-    mutt_buffer_addstr(cmd, "UID STORE ");
-    mutt_buffer_addstr(cmd, uid);
-    mutt_buffer_addstr(cmd, " +FLAGS.SILENT (");
-    mutt_buffer_addstr(cmd, tags);
-    mutt_buffer_addstr(cmd, ")");
+    struct Buffer cmd = {0};
+    mutt_buffer_addstr(&cmd, "UID STORE ");
+    mutt_buffer_addstr(&cmd, uid);
+    mutt_buffer_addstr(&cmd, " +FLAGS.SILENT (");
+    mutt_buffer_addstr(&cmd, tags);
+    mutt_buffer_addstr(&cmd, ")");
 
-    if (imap_exec(idata, cmd->data, 0) != 0)
+    int rc = imap_exec(idata, cmd.data, 0);
+    mutt_buffer_deinit(&cmd);
+   
+    if (rc != 0)
     {
       mutt_debug(1, "fail to add new flags\n");
-      mutt_buffer_free(&cmd);
       return -1;
     }
-
-    mutt_buffer_free(&cmd);
   }
 
   /* We are good sync them */
