@@ -37,15 +37,15 @@ struct Buffer
   int destroy;  /**< destroy 'data' when done? */
 };
 
-#define MoreArgs(p) (*p->dptr && (*p->dptr != ';') && (*p->dptr != '#'))
+#define MoreArgs(p) (*(p)->dptr && (*(p)->dptr != ';') && (*(p)->dptr != '#'))
 
-void           mutt_buffer_addch(struct Buffer *buf, char c);
-void           mutt_buffer_addstr(struct Buffer *buf, const char *s);
-void           mutt_buffer_free(struct Buffer **p);
-struct Buffer *mutt_buffer_from(char *seed);
-void           mutt_buffer_init(struct Buffer *b);
-void           mutt_buffer_deinit(struct Buffer *b);
-int            mutt_buffer_printf(struct Buffer *buf, const char *fmt, ...);
-void           mutt_buffer_reset(struct Buffer *b);
+void mutt_buffer_addch(struct Buffer *buf, char c);
+void mutt_buffer_addstr(struct Buffer *buf, const char *s);
+void mutt_buffer_free(struct Buffer **p);
+void mutt_buffer_from(struct Buffer *buf, char *seed);
+void mutt_buffer_init(struct Buffer *buf);
+void mutt_buffer_deinit(struct Buffer *buf);
+int  mutt_buffer_printf(struct Buffer *buf, const char *fmt, ...);
+void mutt_buffer_reset(struct Buffer *buf);
 
 #endif /* _MUTT_BUFFER_H */
