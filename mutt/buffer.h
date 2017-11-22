@@ -34,13 +34,13 @@ struct Buffer
   char *data;   /**< pointer to data */
   char *dptr;   /**< current read/write position */
   size_t dsize; /**< length of data */
-  int destroy;  /**< destroy 'data' when done? */
 };
 
 #define MoreArgs(p) (*(p)->dptr && (*(p)->dptr != ';') && (*(p)->dptr != '#'))
 
 void mutt_buffer_init(struct Buffer *buf);
 void mutt_buffer_deinit(struct Buffer *buf);
+void mutt_buffer_add(struct Buffer *buf, const char *s, size_t len);
 void mutt_buffer_addch(struct Buffer *buf, char c);
 void mutt_buffer_addstr(struct Buffer *buf, const char *s);
 void mutt_buffer_from(struct Buffer *buf, char *seed);

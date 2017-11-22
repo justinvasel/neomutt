@@ -107,7 +107,7 @@ void mutt_buffer_from(struct Buffer *buf, char *seed)
  * Always one byte bigger than necessary for the null terminator, and the
  * buffer is always NUL-terminated
  */
-static void mutt_buffer_add(struct Buffer *buf, const char *s, size_t len)
+void mutt_buffer_add(struct Buffer *buf, const char *s, size_t len)
 {
   if (!buf || !s)
     return;
