@@ -1214,10 +1214,12 @@ int imap_exec_msgset(struct ImapData *idata, const char *pre, const char *post,
 {
   struct Header **hdrs = NULL;
   short oldsort;
-  struct Buffer cmd = {0};
+  struct Buffer cmd;
   int pos;
   int rc;
   int count = 0;
+
+  mutt_buffer_init(&cmd);
 
   /* We make a copy of the headers just in case resorting doesn't give
    exactly the original order (duplicate messages?), because other parts of
@@ -1931,7 +1933,8 @@ int imap_fast_trash(struct Context *ctx, char *dest)
     mutt_str_strfcpy(mbox, "INBOX", sizeof(mbox));
   imap_munge_mbox_name(idata, mmbox, sizeof(mmbox), mbox);
 
-  struct Buffer sync_cmd = {0};
+  struct Buffer sync_cmd;
+  mutt_buffer_init(&sync_cmd);
   for (int i = 0; i < ctx->msgcount; i++)
   {
     if (ctx->hdrs[i]->active && ctx->hdrs[i]->changed &&
@@ -2709,7 +2712,8 @@ static int imap_commit_message_tags(struct Context *ctx, struct Header *h, char 
   /* Remove old custom flags */
   if (HEADER_DATA(h)->flags_remote)
   {
-    struct Buffer cmd = {0};
+    struct Buffer cmd;
+    mutt_buffer_init(&cmd);
     mutt_buffer_addstr(&cmd, "UID STORE ");
     mutt_buffer_addstr(&cmd, uid);
     mutt_buffer_addstr(&cmd, " -FLAGS.SILENT (");
@@ -2730,7 +2734,8 @@ static int imap_commit_message_tags(struct Context *ctx, struct Header *h, char 
   /* Add new custom flags */
   if (tags)
   {
-    struct Buffer cmd = {0};
+    struct Buffer cmd;
+    mutt_buffer_init(&cmd);
     mutt_buffer_addstr(&cmd, "UID STORE ");
     mutt_buffer_addstr(&cmd, uid);
     mutt_buffer_addstr(&cmd, " +FLAGS.SILENT (");
