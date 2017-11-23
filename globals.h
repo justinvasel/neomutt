@@ -176,6 +176,8 @@ WHERE char *TSIconFormat;
 WHERE short TSSupported;
 WHERE char *Username;
 WHERE char *Visual;
+WHERE char *Usr1Command;
+WHERE char *Usr2Command;
 
 WHERE char *CurrentFolder;
 WHERE char *LastFolder;
@@ -260,6 +262,8 @@ WHERE short ImapPollTimeout;
 WHERE SIG_ATOMIC_VOLATILE_T SigAlrm;
 WHERE SIG_ATOMIC_VOLATILE_T SigInt;
 WHERE SIG_ATOMIC_VOLATILE_T SigWinch;
+WHERE SIG_ATOMIC_VOLATILE_T SigUsr1;
+WHERE SIG_ATOMIC_VOLATILE_T SigUsr2;
 
 WHERE int CurrentMenu;
 
