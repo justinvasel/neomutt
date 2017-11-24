@@ -64,15 +64,12 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
                     struct Buffer *err)
 {
   struct Hook *ptr = NULL;
-  struct Buffer command, pattern;
+  struct Buffer command = {0}, pattern = {0};
   int rc;
   bool not = false;
   regex_t *rx = NULL;
   struct Pattern *pat = NULL;
   char path[_POSIX_PATH_MAX];
-
-  mutt_buffer_init(&pattern);
-  mutt_buffer_init(&command);
 
   if (~data & MUTT_GLOBALHOOK) /* NOT a global hook */
   {
@@ -131,8 +128,7 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
       goto error;
     }
 
-    FREE(&pattern.data);
-    mutt_buffer_init(&pattern);
+    mutt_buffer_reinit(&pattern);
     pattern.data = mutt_str_strdup(path);
   }
 #ifdef USE_COMPRESSED
@@ -157,8 +153,7 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
      */
     mutt_str_strfcpy(tmp, pattern.data, sizeof(tmp));
     mutt_check_simple(tmp, sizeof(tmp), DefaultHook);
-    FREE(&pattern.data);
-    mutt_buffer_init(&pattern);
+    mutt_buffer_reinit(&pattern);
     pattern.data = mutt_str_strdup(tmp);
   }
 
@@ -166,8 +161,7 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
   {
     mutt_str_strfcpy(path, command.data, sizeof(path));
     mutt_expand_path(path, sizeof(path));
-    FREE(&command.data);
-    mutt_buffer_init(&command);
+    mutt_buffer_reinit(&command);
     command.data = mutt_str_strdup(path);
   }
 
@@ -179,7 +173,7 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
       /* Ignore duplicate global hooks */
       if (mutt_str_strcmp(ptr->command, command.data) == 0)
       {
-        FREE(&command.data);
+        mutt_buffer_reinit(&command);
         return 0;
       }
     }
@@ -195,8 +189,8 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
          * ignore it instead of creating a duplicate */
         if (mutt_str_strcmp(ptr->command, command.data) == 0)
         {
-          FREE(&command.data);
-          FREE(&pattern.data);
+          mutt_buffer_reinit(&command);
+          mutt_buffer_reinit(&pattern);
           return 0;
         }
       }
@@ -209,7 +203,7 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
          * based upon some other information. */
         FREE(&ptr->command);
         ptr->command = command.data;
-        FREE(&pattern.data);
+        mutt_buffer_reinit(&pattern);
         return 0;
       }
     }
@@ -253,8 +247,8 @@ int mutt_parse_hook(struct Buffer *buf, struct Buffer *s, unsigned long data,
 
 error:
   if (~data & MUTT_GLOBALHOOK) /* NOT a global hook */
-    FREE(&pattern.data);
-  FREE(&command.data);
+    mutt_buffer_reinit(&pattern);
+  mutt_buffer_reinit(&command);
   return -1;
 }
 
@@ -331,14 +325,12 @@ int mutt_parse_unhook(struct Buffer *buf, struct Buffer *s, unsigned long data,
 void mutt_folder_hook(const char *path)
 {
   struct Hook *tmp = NULL;
-  struct Buffer err, token;
+  struct Buffer err = {0}, token = {0};
 
   current_hook_type = MUTT_FOLDERHOOK;
 
-  mutt_buffer_init(&err);
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
-  mutt_buffer_init(&token);
   TAILQ_FOREACH(tmp, &Hooks, entries)
   {
     if (!tmp->command)
@@ -351,19 +343,16 @@ void mutt_folder_hook(const char *path)
         if (mutt_parse_rc_line(tmp->command, &token, &err) == -1)
         {
           mutt_error("%s", err.data);
-          FREE(&token.data);
           mutt_sleep(1); /* pause a moment to let the user see the error */
-          current_hook_type = 0;
-          FREE(&err.data);
-
-          return;
+          goto end;
         }
       }
     }
   }
-  FREE(&token.data);
-  FREE(&err.data);
 
+end:
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
   current_hook_type = 0;
 }
 
@@ -384,16 +373,14 @@ char *mutt_find_hook(int type, const char *pat)
 
 void mutt_message_hook(struct Context *ctx, struct Header *hdr, int type)
 {
-  struct Buffer err, token;
+  struct Buffer err = {0}, token = {0};
   struct Hook *hook = NULL;
   struct PatternCache cache;
 
   current_hook_type = type;
 
-  mutt_buffer_init(&err);
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
-  mutt_buffer_init(&token);
   memset(&cache, 0, sizeof(cache));
   TAILQ_FOREACH(hook, &Hooks, entries)
   {
@@ -406,22 +393,19 @@ void mutt_message_hook(struct Context *ctx, struct Header *hdr, int type)
       {
         if (mutt_parse_rc_line(hook->command, &token, &err) == -1)
         {
-          FREE(&token.data);
           mutt_error("%s", err.data);
           mutt_sleep(1);
-          current_hook_type = 0;
-          FREE(&err.data);
-
-          return;
+          goto end;
         }
         /* Executing arbitrary commands could affect the pattern results,
          * so the cache has to be wiped */
         memset(&cache, 0, sizeof(cache));
       }
   }
-  FREE(&token.data);
-  FREE(&err.data);
 
+end:
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
   current_hook_type = 0;
 }
 
@@ -549,16 +533,13 @@ void mutt_account_hook(const char *url)
   static bool inhook = false;
 
   struct Hook *hook = NULL;
-  struct Buffer token;
-  struct Buffer err;
+  struct Buffer err = {0}, token = {0};
 
   if (inhook)
     return;
 
-  mutt_buffer_init(&err);
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
-  mutt_buffer_init(&token);
 
   TAILQ_FOREACH(hook, &Hooks, entries)
   {
@@ -571,34 +552,30 @@ void mutt_account_hook(const char *url)
 
       if (mutt_parse_rc_line(hook->command, &token, &err) == -1)
       {
-        FREE(&token.data);
         mutt_error("%s", err.data);
-        FREE(&err.data);
         mutt_sleep(1);
-
         inhook = false;
-        return;
+        goto end;
       }
 
       inhook = false;
     }
   }
 
-  FREE(&token.data);
-  FREE(&err.data);
+end:
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
 }
 #endif
 
 void mutt_timeout_hook(void)
 {
   struct Hook *hook = NULL;
-  struct Buffer token;
-  struct Buffer err;
+  struct Buffer err = {0}, token = {0};
   char buf[STRING];
 
   err.data = buf;
   err.dsize = sizeof(buf);
-  mutt_buffer_init(&token);
 
   TAILQ_FOREACH(hook, &Hooks, entries)
   {
@@ -614,7 +591,7 @@ void mutt_timeout_hook(void)
        * failed, we'll carry on with the others. */
     }
   }
-  FREE(&token.data);
+  mutt_buffer_reinit(&token);
 }
 
 /**
@@ -627,13 +604,12 @@ void mutt_timeout_hook(void)
 void mutt_startup_shutdown_hook(int type)
 {
   struct Hook *hook = NULL;
-  struct Buffer token;
-  struct Buffer err;
   char buf[STRING];
+  struct Buffer token = {0};
+  struct Buffer err = {0};
 
   err.data = buf;
   err.dsize = sizeof(buf);
-  mutt_buffer_init(&token);
 
   TAILQ_FOREACH(hook, &Hooks, entries)
   {
@@ -646,5 +622,5 @@ void mutt_startup_shutdown_hook(int type)
       mutt_sleep(1);
     }
   }
-  FREE(&token.data);
+  mutt_buffer_reinit(&token);
 }

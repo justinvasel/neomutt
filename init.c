@@ -674,11 +674,12 @@ int mutt_extract_token(struct Buffer *dest, struct Buffer *tok, int flags)
         }
         else
         {
-          mutt_buffer_deinit(tok);
-          tok->dsize = filter_out_len + mutt_str_strlen(tok->dptr) + 1;
-          char *ptr = mutt_mem_malloc(tok->dsize);
+          size_t size = filter_out_len + mutt_str_strlen(tok->dptr) + 1;
+          char *ptr = mutt_mem_malloc(size);
           memcpy(ptr, filter_out, filter_out_len);
           strcpy(ptr + filter_out_len, tok->dptr);
+          mutt_buffer_reinit(tok);
+          tok->dsize = size;
           tok->data = tok->dptr = ptr;
         }
         FREE(&filter_out);
@@ -725,7 +726,7 @@ int mutt_extract_token(struct Buffer *dest, struct Buffer *tok, int flags)
     else
       mutt_buffer_addch(dest, ch);
   }
-  mutt_buffer_addch(dest, 0); /* terminate the string */
+  mutt_buffer_addch(dest, '\0'); /* terminate the string */
   SKIPWS(tok->dptr);
   return 0;
 }
@@ -1081,12 +1082,8 @@ static int parse_ifdef(struct Buffer *tmp, struct Buffer *s, unsigned long data,
   {
     int rc = mutt_parse_rc_line(tmp->data, &token, err);
     if (rc == -1)
-    {
       mutt_error("Error: %s", err->data);
-      FREE(&token.data);
-      return -1;
-    }
-    FREE(&token.data);
+    mutt_buffer_reinit(&token);
     return rc;
   }
   return 0;
@@ -1238,9 +1235,7 @@ static int parse_replace_list(struct Buffer *buf, struct Buffer *s,
                               unsigned long data, struct Buffer *err)
 {
   struct ReplaceList **list = (struct ReplaceList **) data;
-  struct Buffer templ;
-
-  memset(&templ, 0, sizeof(templ));
+  struct Buffer templ = {0};
 
   /* First token is a regex. */
   if (!MoreArgs(s))
@@ -1260,10 +1255,10 @@ static int parse_replace_list(struct Buffer *buf, struct Buffer *s,
 
   if (add_to_replace_list(list, buf->data, templ.data, err) != 0)
   {
-    FREE(&templ.data);
+    mutt_buffer_reinit(&templ);
     return -1;
   }
-  FREE(&templ.data);
+  mutt_buffer_reinit(&templ);
 
   return 0;
 }
@@ -1327,9 +1322,7 @@ static int parse_unsubjectrx_list(struct Buffer *buf, struct Buffer *s,
 static int parse_spam_list(struct Buffer *buf, struct Buffer *s,
                            unsigned long data, struct Buffer *err)
 {
-  struct Buffer templ;
-
-  mutt_buffer_init(&templ);
+  struct Buffer templ = {0};
 
   /* Insist on at least one parameter */
   if (!MoreArgs(s))
@@ -1355,10 +1348,10 @@ static int parse_spam_list(struct Buffer *buf, struct Buffer *s,
       /* Add to the spam list. */
       if (add_to_replace_list(&SpamList, buf->data, templ.data, err) != 0)
       {
-        FREE(&templ.data);
+        mutt_buffer_reinit(&templ);
         return -1;
       }
-      FREE(&templ.data);
+      mutt_buffer_reinit(&templ);
     }
 
     /* If not, try to remove from the nospam list. */
@@ -3137,7 +3130,6 @@ static int source_rc(const char *rcfile_path, struct Buffer *err)
 {
   FILE *f = NULL;
   int line = 0, rc = 0, conv = 0, line_rc, warnings = 0;
-  struct Buffer token;
   char *linebuf = NULL;
   char *currentline = NULL;
   char rcfile[PATH_MAX];
@@ -3191,7 +3183,7 @@ static int source_rc(const char *rcfile_path, struct Buffer *err)
     return -1;
   }
 
-  mutt_buffer_init(&token);
+  struct Buffer token = {0};
   while ((linebuf = mutt_file_read_line(linebuf, &buflen, f, &line, MUTT_CONT)) != NULL)
   {
     conv = ConfigCharset && (*ConfigCharset) && Charset;
@@ -3234,7 +3226,7 @@ static int source_rc(const char *rcfile_path, struct Buffer *err)
     if (conv)
       FREE(&currentline);
   }
-  FREE(&token.data);
+  mutt_buffer_reinit(&token);
   FREE(&linebuf);
   mutt_file_fclose(&f);
   if (pid != -1)
@@ -3318,7 +3310,7 @@ int mutt_parse_rc_line(/* const */ char *line, struct Buffer *token, struct Buff
   mutt_buffer_addstr(&expn, line);
   mutt_buffer_rewind(&expn);
 
-  *err->data = 0;
+  *err->data = '\0';
 
   SKIPWS(expn.dptr);
   while (*expn.dptr)
@@ -3351,7 +3343,7 @@ int mutt_parse_rc_line(/* const */ char *line, struct Buffer *token, struct Buff
     }
   }
 finish:
-  mutt_buffer_deinit(&expn);
+  mutt_buffer_reinit(&expn);
   return r;
 }
 
@@ -3893,10 +3885,7 @@ int mutt_query_variables(struct ListHead *queries)
 {
   char command[STRING];
 
-  struct Buffer err, token;
-
-  mutt_buffer_init(&err);
-  mutt_buffer_init(&token);
+  struct Buffer err = {0}, token = {0};
 
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
@@ -3908,16 +3897,16 @@ int mutt_query_variables(struct ListHead *queries)
     if (mutt_parse_rc_line(command, &token, &err) == -1)
     {
       fprintf(stderr, "%s\n", err.data);
-      FREE(&token.data);
-      FREE(&err.data);
+      mutt_buffer_reinit(&token);
+      mutt_buffer_reinit(&err);
 
       return 1;
     }
     printf("%s\n", err.data);
   }
 
-  FREE(&token.data);
-  FREE(&err.data);
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
 
   return 0;
 }
@@ -3929,10 +3918,7 @@ int mutt_dump_variables(int hide_sensitive)
 {
   char command[STRING];
 
-  struct Buffer err, token;
-
-  mutt_buffer_init(&err);
-  mutt_buffer_init(&token);
+  struct Buffer err = {0}, token = {0};
 
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
@@ -3951,42 +3937,40 @@ int mutt_dump_variables(int hide_sensitive)
     if (mutt_parse_rc_line(command, &token, &err) == -1)
     {
       fprintf(stderr, "%s\n", err.data);
-      FREE(&token.data);
-      FREE(&err.data);
+      mutt_buffer_reinit(&token);
+      mutt_buffer_reinit(&err);
 
       return 1;
     }
     printf("%s\n", err.data);
   }
 
-  FREE(&token.data);
-  FREE(&err.data);
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
 
   return 0;
 }
 
 static int execute_commands(struct ListHead *p)
 {
-  struct Buffer err, token;
+  struct Buffer err = {0}, token = {0};
 
-  mutt_buffer_init(&err);
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
-  mutt_buffer_init(&token);
   struct ListNode *np;
   STAILQ_FOREACH(np, p, entries)
   {
     if (mutt_parse_rc_line(np->data, &token, &err) == -1)
     {
       fprintf(stderr, _("Error in command line: %s\n"), err.data);
-      FREE(&token.data);
-      FREE(&err.data);
+      mutt_buffer_reinit(&token);
+      mutt_buffer_reinit(&err);
 
       return -1;
     }
   }
-  FREE(&token.data);
-  FREE(&err.data);
+  mutt_buffer_reinit(&token);
+  mutt_buffer_reinit(&err);
 
   return 0;
 }
@@ -4031,9 +4015,8 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   struct utsname utsname;
   char *p, buffer[STRING];
   int need_pause = 0;
-  struct Buffer err;
+  struct Buffer err = {0};
 
-  mutt_buffer_init(&err);
   err.dsize = STRING;
   err.data = mutt_mem_malloc(err.dsize);
   err.dptr = err.data;
@@ -4205,17 +4188,15 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   p = getenv("REPLYTO");
   if (p)
   {
-    struct Buffer buf, token;
+    struct Buffer buf = {0}, token = {0};
 
     snprintf(buffer, sizeof(buffer), "Reply-To: %s", p);
 
-    mutt_buffer_init(&buf);
     buf.data = buf.dptr = buffer;
     buf.dsize = mutt_str_strlen(buffer);
 
-    mutt_buffer_init(&token);
     parse_my_hdr(&token, &buf, 0, &err);
-    FREE(&token.data);
+    mutt_buffer_reinit(&token);
   }
 
   p = getenv("EMAIL");
@@ -4388,7 +4369,7 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   }
 #endif
 
-  FREE(&err.data);
+  mutt_buffer_reinit(&err);
 }
 
 int mutt_get_hook_type(const char *name)

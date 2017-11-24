@@ -29,7 +29,7 @@
  * | Function             | Description
  * | :------------------- | :--------------------------------------------------
  * | mutt_buffer_init()   | Initialise a new Buffer
- * | mutt_buffer_deinit() | Release the memory allocated by a Buffer
+ * | mutt_buffer_reinit() | Release all memory and reinitialize a Buffer
  * | mutt_buffer_add()    | Add a string to a Buffer, expanding it if necessary
  * | mutt_buffer_addch()  | Add a single character to a Buffer
  * | mutt_buffer_addstr() | Add a string to a Buffer
@@ -60,12 +60,13 @@ void mutt_buffer_init(struct Buffer *buf)
 }
 
 /**
- * mutt_buffer_deinit - Release the memory allocated by a Buffer
- * @param b Buffer to release
+ * mutt_buffer_reinit - Release all memory and reinitialize a Buffer
+ * @param b Buffer to release and reinitialize
  */
-void mutt_buffer_deinit(struct Buffer *buf)
+void mutt_buffer_reinit(struct Buffer *buf)
 {
   FREE(&buf->data);
+  mutt_buffer_init(buf);
 }
 
 /**
