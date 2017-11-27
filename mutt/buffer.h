@@ -34,7 +34,7 @@ struct Buffer
   char *data;                       /**< pointer to data */
   char *dptr;                       /**< current read/write position */
   size_t dsize;                     /**< length of data */
-  enum { BUFFER_SSO_SIZE = 64 };    /**< small-string optimization smallness */
+  enum { BUFFER_SSO_SIZE = 128 };   /**< small-string optimization smallness */
   char sso[BUFFER_SSO_SIZE];        /**< small-string optimization buffer */
 };
 
