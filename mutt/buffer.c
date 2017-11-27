@@ -49,6 +49,44 @@
 #include "string2.h"
 
 /**
+ * mutt_buffer_reserve - Make sure we can append len bytes without reallocation
+ * @param b Buffer to reserve
+ * @param len Number of bytes to reserve
+ */
+static void mutt_buffer_reserve(struct Buffer *buf, size_t len)
+{
+  if (!buf || len == 0)
+    return;
+
+  /* The buffer is empty and there's enough room in SSO space */
+  if (buf->data == NULL && len + 1 < BUFFER_SSO_SIZE)
+  {
+    buf->data = buf->dptr = buf->sso;
+    buf->dsize = BUFFER_SSO_SIZE;
+    return;
+  }
+
+  /* We need to reallocate */
+  if ((buf->dptr + len + 1) > (buf->data + buf->dsize))
+  {
+    size_t offset = buf->dptr - buf->data;
+    buf->dsize += (len < 128) ? 128 : len + 1;
+    /* If we are in SSO space, reallocate and copy over the memory manually.
+     * Otherwise, let realloc do the job */
+    if (buf->data == buf->sso)
+    {
+      buf->data = mutt_mem_malloc(buf->dsize);
+      memcpy(buf->data, buf->sso, offset);
+    }
+    else
+    {
+      mutt_mem_realloc(&buf->data, buf->dsize);
+    }
+    mutt_buffer_seek(buf, offset);
+  }
+}
+
+/**
  * mutt_buffer_init - Initialise a new Buffer
  * @param b Buffer to initialise
  *
@@ -56,6 +94,9 @@
  */
 void mutt_buffer_init(struct Buffer *buf)
 {
+  if (!buf)
+    return;
+
   memset(buf, 0, sizeof(struct Buffer));
 }
 
@@ -65,7 +106,11 @@ void mutt_buffer_init(struct Buffer *buf)
  */
 void mutt_buffer_reinit(struct Buffer *buf)
 {
-  FREE(&buf->data);
+  if (!buf)
+    return;
+
+  if (buf->data != buf->sso)
+    FREE(&buf->data);
   mutt_buffer_init(buf);
 }
 
@@ -78,6 +123,9 @@ void mutt_buffer_reinit(struct Buffer *buf)
  */
 void mutt_buffer_reset(struct Buffer *buf)
 {
+  if (!buf)
+    return;
+
   memset(buf->data, 0, buf->dsize);
   mutt_buffer_rewind(buf);
 }
@@ -89,13 +137,11 @@ void mutt_buffer_reset(struct Buffer *buf)
  */
 void mutt_buffer_from(struct Buffer *buf, char *seed)
 {
-  if (!seed)
+  if (!buf || !seed)
     return;
 
   mutt_buffer_init(buf);
-  buf->data = mutt_str_strdup(seed);
-  buf->dsize = mutt_str_strlen(seed);
-  mutt_buffer_seek(buf, buf->dsize);
+  mutt_buffer_add(buf, seed, mutt_str_strlen(seed));
 }
 
 /**
@@ -110,18 +156,10 @@ void mutt_buffer_from(struct Buffer *buf, char *seed)
  */
 void mutt_buffer_add(struct Buffer *buf, const char *s, size_t len)
 {
-  if (!buf || !s)
+  if (!buf || !s || !len)
     return;
 
-  if ((buf->dptr + len + 1) > (buf->data + buf->dsize))
-  {
-    size_t offset = buf->dptr - buf->data;
-    buf->dsize += (len < 128) ? 128 : len + 1;
-    mutt_mem_realloc(&buf->data, buf->dsize);
-    mutt_buffer_seek(buf, offset);
-  }
-  if (!buf->dptr)
-    return;
+  mutt_buffer_reserve(buf, len);
   memcpy(buf->dptr, s, len);
   buf->dptr += len;
   *(buf->dptr) = '\0';
@@ -136,7 +174,7 @@ void mutt_buffer_add(struct Buffer *buf, const char *s, size_t len)
  */
 int mutt_buffer_printf(struct Buffer *buf, const char *fmt, ...)
 {
-  if (!buf)
+  if (!buf | !fmt)
     return 0;
 
   va_list ap, ap_retry;
@@ -153,10 +191,7 @@ int mutt_buffer_printf(struct Buffer *buf, const char *fmt, ...)
   /* solaris 9 vsnprintf barfs when blen is 0 */
   if (!blen)
   {
-    blen = 128;
-    buf->dsize += blen;
-    mutt_mem_realloc(&buf->data, buf->dsize);
-    mutt_buffer_seek(buf, doff);
+    mutt_buffer_reserve(buf, 128);
   }
   len = vsnprintf(buf->dptr, blen, fmt, ap);
   if (len >= blen)
@@ -164,8 +199,7 @@ int mutt_buffer_printf(struct Buffer *buf, const char *fmt, ...)
     blen = ++len - blen;
     if (blen < 128)
       blen = 128;
-    buf->dsize += blen;
-    mutt_mem_realloc(&buf->data, buf->dsize);
+    mutt_buffer_reserve(buf, blen);
     mutt_buffer_seek(buf, doff);
     len = vsnprintf(buf->dptr, len, fmt, ap_retry);
   }
