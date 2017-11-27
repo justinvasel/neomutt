@@ -35,6 +35,7 @@
  * | mutt_buffer_addstr() | Add a string to a Buffer
  * | mutt_buffer_from()   | Initialize a Buffer from an existing string
  * | mutt_buffer_printf() | Format a string into a Buffer
+ * | mutt_buffer_reserve()| Preallocate a certain number of bytes
  * | mutt_buffer_reset()  | Reset an existing Buffer
  * | mutt_buffer_rewind() | Rewind the r/w position to the start of the Buffer
  * | mutt_buffer_seek()   | Set the r/w position to a specific offset
@@ -53,7 +54,7 @@
  * @param b Buffer to reserve
  * @param len Number of bytes to reserve
  */
-static void mutt_buffer_reserve(struct Buffer *buf, size_t len)
+void mutt_buffer_reserve(struct Buffer *buf, size_t len)
 {
   if (!buf || len == 0)
     return;
