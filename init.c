@@ -4503,7 +4503,7 @@ static int parse_subscribe_to(struct Buffer *b, struct Buffer *s,
   if (!b || !s || !err)
     return -1;
 
-  mutt_buffer_reset(err);
+  mutt_buffer_rewind(err);
 
   if (MoreArgs(s))
   {
