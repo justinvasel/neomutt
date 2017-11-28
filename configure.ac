@@ -38,6 +38,8 @@ fi
 
 if test "$CC" = "gcc"; then
 	CFLAGS="$CFLAGS -fno-delete-null-pointer-checks"
+	CFLAGS="$CFLAGS -Wunused-parameter"
+	CFLAGS="$CFLAGS -Wshadow"
 fi
 
 CFLAGS="-Wall -pedantic $CFLAGS"
