@@ -1009,8 +1009,10 @@ char *parse_keymap(int *menu, struct Buffer *s, int maxmenus, int *nummenus, str
       mutt_str_strfcpy(err->data, _("null key sequence"), err->dsize);
     }
     else if (MoreArgs(s))
+    {
       ret = mutt_str_strdup(buf.data);
       goto end;
+    }
   }
   else
   {
