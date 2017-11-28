@@ -28,7 +28,6 @@
  *
  * | Function             | Description
  * | :------------------- | :--------------------------------------------------
- * | mutt_buffer_init()   | Initialise a new Buffer
  * | mutt_buffer_reinit() | Release all memory and reinitialize a Buffer
  * | mutt_buffer_add()    | Add a string to a Buffer, expanding it if necessary
  * | mutt_buffer_addch()  | Add a single character to a Buffer
@@ -87,20 +86,6 @@ void mutt_buffer_reserve(struct Buffer *buf, size_t len)
 }
 
 /**
- * mutt_buffer_init - Initialise a new Buffer
- * @param b Buffer to initialise
- *
- * This must not be called on a Buffer that already contains data.
- */
-void mutt_buffer_init(struct Buffer *buf)
-{
-  if (!buf)
-    return;
-
-  memset(buf, 0, sizeof(struct Buffer));
-}
-
-/**
  * mutt_buffer_reinit - Release all memory and reinitialize a Buffer
  * @param b Buffer to release and reinitialize
  */
@@ -111,7 +96,8 @@ void mutt_buffer_reinit(struct Buffer *buf)
 
   if (buf->data != buf->sso)
     FREE(&buf->data);
-  mutt_buffer_init(buf);
+
+  memset(buf, 0, sizeof(struct Buffer));
 }
 
 /**
@@ -124,7 +110,7 @@ void mutt_buffer_from(struct Buffer *buf, char *seed)
   if (!buf || !seed)
     return;
 
-  mutt_buffer_init(buf);
+  memset(buf, 0, sizeof(struct Buffer));
   mutt_buffer_add(buf, seed, mutt_str_strlen(seed));
 }
 
