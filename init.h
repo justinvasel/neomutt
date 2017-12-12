@@ -42,6 +42,7 @@
 #include "mx.h"
 #include "options.h"
 #include "protos.h"
+#include "sidebar.h"
 #include "sort.h"
 #ifdef USE_LUA
 #include "mutt_lua.h"
@@ -55,24 +56,6 @@ struct Buffer;
 #define MUTT_SET_INV   (1 << 0) /**< default is to invert all vars */
 #define MUTT_SET_UNSET (1 << 1) /**< default is to unset all vars */
 #define MUTT_SET_RESET (1 << 2) /**< default is to reset all vars to default */
-
-/* forced redraw/resort types + other flags */
-#define R_NONE        0
-#define R_INDEX       (1 << 0) /**< redraw the index menu (MENU_MAIN) */
-#define R_PAGER       (1 << 1) /**< redraw the pager menu */
-#define R_PAGER_FLOW  (1 << 2) /**< reflow line_info and redraw the pager menu */
-#define R_RESORT      (1 << 3) /**< resort the mailbox */
-#define R_RESORT_SUB  (1 << 4) /**< resort subthreads */
-#define R_RESORT_INIT (1 << 5) /**< resort from scratch */
-#define R_TREE        (1 << 6) /**< redraw the thread tree */
-#define R_REFLOW      (1 << 7) /**< reflow window layout and full redraw */
-#define R_SIDEBAR     (1 << 8) /**< redraw the sidebar */
-#define R_MENU        (1 << 9) /**< redraw all menus */
-#define R_BOTH        (R_INDEX | R_PAGER)
-#define R_RESORT_BOTH (R_RESORT | R_RESORT_SUB)
-
-/* general flags, to be OR'd with the R_ flags above (so keep shifting..) */
-#define F_SENSITIVE   (1 << 9)
 
 #define IS_SENSITIVE(x) (((x).flags & F_SENSITIVE) == F_SENSITIVE)
 
@@ -3193,163 +3176,6 @@ struct ConfigDef MuttVars[] = {
   ** .pp
   ** If \fIset\fP, only subscribed newsgroups that contain unread articles
   ** will be displayed in browser.
-  */
-#endif
-#ifdef USE_SIDEBAR
-  { "sidebar_delim_chars", DT_STRING, R_SIDEBAR, &SidebarDelimChars, IP "/." },
-  /*
-  ** .pp
-  ** This contains the list of characters which you would like to treat
-  ** as folder separators for displaying paths in the sidebar.
-  ** .pp
-  ** Local mail is often arranged in directories: `dir1/dir2/mailbox'.
-  ** .ts
-  ** set sidebar_delim_chars='/'
-  ** .te
-  ** .pp
-  ** IMAP mailboxes are often named: `folder1.folder2.mailbox'.
-  ** .ts
-  ** set sidebar_delim_chars='.'
-  ** .te
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_short_path, $$sidebar_folder_indent, $$sidebar_indent_string.
-  */
-  { "sidebar_divider_char", DT_STRING, R_SIDEBAR, &SidebarDividerChar, 0 },
-  /*
-  ** .pp
-  ** This specifies the characters to be drawn between the sidebar (when
-  ** visible) and the other NeoMutt panels. ASCII and Unicode line-drawing
-  ** characters are supported.
-  */
-  { "sidebar_folder_indent", DT_BOOL, R_SIDEBAR, &SidebarFolderIndent, 0 },
-  /*
-  ** .pp
-  ** Set this to indent mailboxes in the sidebar.
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_short_path, $$sidebar_indent_string, $$sidebar_delim_chars.
-  */
-  { "sidebar_format", DT_STRING, R_SIDEBAR, &SidebarFormat, IP "%B%*  %n" },
-  /*
-  ** .pp
-  ** This variable allows you to customize the sidebar display. This string is
-  ** similar to $$index_format, but has its own set of \fCprintf(3)\fP-like
-  ** sequences:
-  ** .dl
-  ** .dt %B  .dd Name of the mailbox
-  ** .dt %S  .dd * Size of mailbox (total number of messages)
-  ** .dt %N  .dd * Number of unread messages in the mailbox
-  ** .dt %n  .dd N if mailbox has new mail, blank otherwise
-  ** .dt %F  .dd * Number of Flagged messages in the mailbox
-  ** .dt %!  .dd ``!'' : one flagged message;
-  **             ``!!'' : two flagged messages;
-  **             ``n!'' : n flagged messages (for n > 2).
-  **             Otherwise prints nothing.
-  ** .dt %d  .dd * @ Number of deleted messages
-  ** .dt %L  .dd * @ Number of messages after limiting
-  ** .dt %t  .dd * @ Number of tagged messages
-  ** .dt %>X .dd right justify the rest of the string and pad with ``X''
-  ** .dt %|X .dd pad to the end of the line with ``X''
-  ** .dt %*X .dd soft-fill with character ``X'' as pad
-  ** .de
-  ** .pp
-  ** * = Can be optionally printed if nonzero
-  ** @ = Only applicable to the current folder
-  ** .pp
-  ** In order to use %S, %N, %F, and %!, $$mail_check_stats must
-  ** be \fIset\fP.  When thus set, a suggested value for this option is
-  ** "%B%?F? [%F]?%* %?N?%N/?%S".
-  */
-  { "sidebar_indent_string", DT_STRING, R_SIDEBAR, &SidebarIndentString, IP "  " },
-  /*
-  ** .pp
-  ** This specifies the string that is used to indent mailboxes in the sidebar.
-  ** It defaults to two spaces.
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_short_path, $$sidebar_folder_indent, $$sidebar_delim_chars.
-  */
-  { "sidebar_new_mail_only", DT_BOOL, R_SIDEBAR, &SidebarNewMailOnly, 0 },
-  /*
-  ** .pp
-  ** When set, the sidebar will only display mailboxes containing new, or
-  ** flagged, mail.
-  ** .pp
-  ** \fBSee also:\fP $sidebar_whitelist.
-  */
-  { "sidebar_next_new_wrap", DT_BOOL, R_NONE, &SidebarNextNewWrap, 0 },
-  /*
-  ** .pp
-  ** When set, the \fC<sidebar-next-new>\fP command will not stop and the end of
-  ** the list of mailboxes, but wrap around to the beginning. The
-  ** \fC<sidebar-prev-new>\fP command is similarly affected, wrapping around to
-  ** the end of the list.
-  */
-  { "sidebar_on_right", DT_BOOL, R_BOTH|R_REFLOW, &SidebarOnRight, 0 },
-  /*
-  ** .pp
-  ** When set, the sidebar will appear on the right-hand side of the screen.
-  */
-  { "sidebar_short_path", DT_BOOL, R_SIDEBAR, &SidebarShortPath, 0 },
-  /*
-  ** .pp
-  ** By default the sidebar will show the mailbox's path, relative to the
-  ** $$folder variable. Setting \fCsidebar_shortpath=yes\fP will shorten the
-  ** names relative to the previous name. Here's an example:
-  ** .dl
-  ** .dt \fBshortpath=no\fP .dd \fBshortpath=yes\fP .dd \fBshortpath=yes, folderindent=yes, indentstr=".."\fP
-  ** .dt \fCfruit\fP        .dd \fCfruit\fP         .dd \fCfruit\fP
-  ** .dt \fCfruit.apple\fP  .dd \fCapple\fP         .dd \fC..apple\fP
-  ** .dt \fCfruit.banana\fP .dd \fCbanana\fP        .dd \fC..banana\fP
-  ** .dt \fCfruit.cherry\fP .dd \fCcherry\fP        .dd \fC..cherry\fP
-  ** .de
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_delim_chars, $$sidebar_folder_indent,
-  ** $$sidebar_indent_string, $$sidebar_component_depth.
-  */
-  { "sidebar_sort_method", DT_SORT|DT_SORT_SIDEBAR, R_SIDEBAR, &SidebarSortMethod, SORT_ORDER },
-  /*
-  ** .pp
-  ** Specifies how to sort entries in the file browser.  By default, the
-  ** entries are sorted alphabetically.  Valid values:
-  ** .il
-  ** .dd alpha (alphabetically)
-  ** .dd count (all message count)
-  ** .dd flagged (flagged message count)
-  ** .dd name (alphabetically)
-  ** .dd new (unread message count)
-  ** .dd path (alphabetically)
-  ** .dd unread (unread message count)
-  ** .dd unsorted
-  ** .ie
-  ** .pp
-  ** You may optionally use the ``reverse-'' prefix to specify reverse sorting
-  ** order (example: ``\fCset sort_browser=reverse-date\fP'').
-  */
-  { "sidebar_component_depth", DT_NUMBER, R_SIDEBAR, &SidebarComponentDepth, 0 },
-  /*
-  ** .pp
-  ** By default the sidebar will show the mailbox's path, relative to the
-  ** $$folder variable. This specifies the number of parent directories to hide
-  ** from display in the sidebar. For example: If a maildir is normally
-  ** displayed in the sidebar as dir1/dir2/dir3/maildir, setting
-  ** \fCsidebar_component_depth=2\fP will display it as dir3/maildir, having
-  ** truncated the 2 highest directories.
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_short_path
-  */
-  { "sidebar_visible", DT_BOOL, R_REFLOW, &SidebarVisible, 0 },
-  /*
-  ** .pp
-  ** This specifies whether or not to show sidebar. The sidebar shows a list of
-  ** all your mailboxes.
-  ** .pp
-  ** \fBSee also:\fP $$sidebar_format, $$sidebar_width
-  */
-  { "sidebar_width", DT_NUMBER, R_REFLOW, &SidebarWidth, 30 },
-  /*
-  ** .pp
-  ** This controls the width of the sidebar.  It is measured in screen columns.
-  ** For example: sidebar_width=20 could display 20 ASCII characters, or 10
-  ** Chinese characters.
   */
 #endif
   { "sig_dashes",       DT_BOOL, R_NONE, &SigDashes, 1 },

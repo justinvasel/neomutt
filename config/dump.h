@@ -36,6 +36,10 @@ struct ConfigSet;
 #define CS_DUMP_VERBOSE     (1 << 3) /**< QWQ */
 #define CS_DUMP_NO_ESCAPING (1 << 4) /**< QWQ */
 
+#define CS_DUMP_ACTIVE  1
+#define CS_DUMP_DISABLE 1
+
+
 void              dump_config(struct ConfigSet *cs, int style, int flags);
 int               elem_list_sort(const void *a, const void *b);
 void              escape_char(char *buf, size_t buflen, char c, char *p);

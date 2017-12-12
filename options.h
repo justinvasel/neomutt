@@ -194,14 +194,6 @@ WHERE bool SaveAddress;
 WHERE bool SaveEmpty;
 WHERE bool SaveName;
 WHERE bool Score;
-#ifdef USE_SIDEBAR
-WHERE bool SidebarVisible;
-WHERE bool SidebarFolderIndent;
-WHERE bool SidebarNewMailOnly;
-WHERE bool SidebarNextNewWrap;
-WHERE bool SidebarShortPath;
-WHERE bool SidebarOnRight;
-#endif
 WHERE bool SigDashes;
 WHERE bool SigOnTop;
 WHERE bool SortRe;

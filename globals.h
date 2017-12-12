@@ -87,10 +87,6 @@ WHERE struct ReplaceList *SubjectRegexList;
 
 WHERE unsigned short Counter;
 
-#ifdef USE_SIDEBAR
-WHERE struct ListHead SidebarWhitelist INITVAL(STAILQ_HEAD_INITIALIZER(SidebarWhitelist));
-#endif
-
 /* flags for received signals */
 WHERE SIG_ATOMIC_VOLATILE_T SigAlrm;
 WHERE SIG_ATOMIC_VOLATILE_T SigInt;
@@ -219,12 +215,6 @@ WHERE char *SendCharset;
 WHERE char *Sendmail;
 WHERE char *Shell;
 WHERE char *ShowMultipartAlternative;
-#ifdef USE_SIDEBAR
-WHERE char *SidebarDelimChars;
-WHERE char *SidebarDividerChar;
-WHERE char *SidebarFormat;
-WHERE char *SidebarIndentString;
-#endif
 WHERE char *Signature;
 WHERE char *SimpleSearch;
 #ifdef USE_SMTP
@@ -274,10 +264,6 @@ WHERE short ScoreThresholdDelete;
 WHERE short ScoreThresholdRead;
 WHERE short ScoreThresholdFlag;
 
-#ifdef USE_SIDEBAR
-WHERE short SidebarComponentDepth;
-WHERE short SidebarWidth;
-#endif
 #ifdef USE_IMAP
 WHERE short ImapKeepalive;
 WHERE short ImapPipelineDepth;

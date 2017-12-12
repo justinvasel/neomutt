@@ -25,9 +25,26 @@
 #ifndef _MUTT_SIDEBAR_H
 #define _MUTT_SIDEBAR_H
 
-struct Context;
 struct Buffy;
+struct ConfigSet;
+struct Context;
 
+extern short           SidebarComponentDepth;
+extern char *          SidebarDelimChars;
+extern char *          SidebarDividerChar;
+extern bool            SidebarFolderIndent;
+extern char *          SidebarFormat;
+extern char *          SidebarIndentString;
+extern bool            SidebarNewMailOnly;
+extern bool            SidebarNextNewWrap;
+extern bool            SidebarOnRight;
+extern bool            SidebarShortPath;
+extern short           SidebarSortMethod;
+extern bool            SidebarVisible;
+extern struct ListHead SidebarWhitelist;
+extern short           SidebarWidth;
+
+bool mutt_sb_init(struct ConfigSet *cs);
 void mutt_sb_change_mailbox(int op);
 void mutt_sb_draw(void);
 const char *mutt_sb_get_highlight(void);

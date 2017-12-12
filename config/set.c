@@ -357,7 +357,7 @@ bool cs_register_type(struct ConfigSet *cs, unsigned int type, const struct Conf
  * @param vars Variable definition
  * @retval bool True, if all variables were registered successfully
  */
-bool cs_register_variables(const struct ConfigSet *cs, struct ConfigDef vars[])
+bool cs_register_variables(const struct ConfigSet *cs, struct ConfigDef vars[], int flags)
 {
   if (!cs || !vars)
     return CSR_ERR_CODE; /* LCOV_EXCL_LINE */

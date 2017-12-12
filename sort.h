@@ -44,7 +44,6 @@ WHERE short SortBrowser;
 WHERE short Sort;
 WHERE short SortAux; /* auxiliary sorting method */
 WHERE short SortAlias;
-WHERE short SidebarSortMethod;
 
 /* FIXME: This one does not belong to here */
 WHERE short PgpSortKeys;

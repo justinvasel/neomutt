@@ -3924,11 +3924,13 @@ void mutt_init(int skip_sys_rc, struct ListHead *commands)
   sort_init(Config);
   string_init(Config);
 
-  if (!cs_register_variables(Config, MuttVars))
+  if (!cs_register_variables(Config, MuttVars, 0))
   {
     fprintf(stderr, "cs_register_variables() failed\n");
     return;
   }
+  if (!mutt_sb_init(Config))
+    return;
 
   Groups = mutt_hash_create(1031, 0);
   /* reverse alias keys need to be strdup'ed because of idna conversions */

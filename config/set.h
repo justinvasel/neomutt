@@ -72,6 +72,8 @@ typedef void    (*cst_destroy)   (const struct ConfigSet *cs, void *var, const s
 
 #define IP (intptr_t)
 
+#define CS_REG_DISABLED (1 << 0)
+
 struct ConfigDef
 {
   const char   *name;      /**< user-visible name */
@@ -109,7 +111,7 @@ const struct ConfigSetType *cs_get_type_def(const struct ConfigSet *cs, unsigned
 const struct ConfigDef *cs_get_var_def(const struct ConfigSet *cs, const char *name);
 
 bool cs_register_type(struct ConfigSet *cs, unsigned int type, const struct ConfigSetType *cst);
-bool cs_register_variables(const struct ConfigSet *cs, struct ConfigDef vars[]);
+bool cs_register_variables(const struct ConfigSet *cs, struct ConfigDef vars[], int flags);
 struct HashElem *cs_inherit_variable(const struct ConfigSet *cs, struct HashElem *parent, const char *name);
 int cs_set_initial_value(const struct ConfigSet *cs, const char *name, const char *value, struct Buffer *err);
 
