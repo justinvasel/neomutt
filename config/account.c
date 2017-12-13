@@ -120,7 +120,7 @@ void ac_free(const struct ConfigSet *cs, struct Account0 **ac)
   {
     snprintf(child, sizeof(child), "%s:%s", (*ac)->name, (*ac)->var_names[i]);
     mutt_buffer_reset(&err);
-    int result = cs_reset_variable(cs, child, &err);
+    int result = cs_str_reset(cs, child, &err);
     if (CSR_RESULT(result) != CSR_SUCCESS)
       mutt_debug(1, "reset failed for %s: %s\n", child, err.data);
   }

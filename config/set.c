@@ -35,16 +35,17 @@
  * | cs_get_type_def()       | Get the definition for a type
  * | cs_he_native_get()      | Natively get the value of a HashElem config item
  * | cs_he_native_set()      | Natively set the value of a HashElem config item
+ * | cs_he_reset()           | Reset a config item to its initial value
  * | cs_inherit_variable()   | Create in inherited config item
  * | cs_init()               | Initialise a Config Set
  * | cs_notify_listeners()   | Notify all listeners of an event
  * | cs_register_type()      | Register a type of config item
  * | cs_register_variables() | Register a set of config items
  * | cs_remove_listener()    | Remove a listener (callback function)
- * | cs_reset_variable()     | Reset a config item to its initial value
  * | cs_set_initial_value()  | Override the initial value of a config item
  * | cs_str_native_get()     | Natively get the value of a string config item
  * | cs_str_native_set()     | Natively set the value of a string config item
+ * | cs_str_reset()          | Reset a config item to its initial value
  * | cs_str_string_get()     | Get a config item as a string
  * | cs_str_string_set()     | Set a config item by string
  * | destroy()               | Callback function for the Hash Table
@@ -383,61 +384,41 @@ bool cs_register_variables(const struct ConfigSet *cs, struct ConfigDef vars[], 
 }
 
 /**
- * cs_str_string_set - Set a config item by string
+ * cs_he_string_set - Set a config item by string
  * @param cs    Config items
- * @param name  Name of config item
+ * @param he   HashElem representing config item
  * @param value Value to set
  * @param err   Buffer for error messages
  * @retval int Result, e.g. #CSR_SUCCESS
  */
-int cs_str_string_set(const struct ConfigSet *cs, const char *name,
+int cs_he_string_set(const struct ConfigSet *cs, struct HashElem *he,
                       const char *value, struct Buffer *err)
 {
-  if (!cs || !name)
+  if (!cs || !he)
     return CSR_ERR_CODE; /* LCOV_EXCL_LINE */
 
-  struct HashElem *he = cs_get_elem(cs, name);
-  if (!he)
-  {
-    mutt_buffer_printf(err, "Unknown var '%s'", name);
-    return CSR_ERR_UNKNOWN;
-  }
-
-  const struct ConfigSetType *cst = NULL;
-  const char *notify_name = NULL;
-
-  if (he->type & DT_INHERITED)
-  {
-    struct Inheritance *i = he->data;
-    cst = cs_get_type_def(cs, i->parent->type);
-  }
-  else
-  {
-    cst = cs_get_type_def(cs, he->type);
-  }
-
-  if (!cst)
-  {
-    mutt_debug(1, "Variable '%s' has an invalid type %d\n", name, he->type);
-    return CSR_ERR_CODE;
-  }
-
-  void *var = NULL;
-
   struct ConfigDef *cdef = NULL;
+  const struct ConfigSetType *cst = NULL;
+  void *var = NULL;
 
   if (he->type & DT_INHERITED)
   {
     struct Inheritance *i = he->data;
     cdef = i->parent->data;
     var = &i->var;
-    notify_name = name;
+    cst = cs_get_type_def(cs, i->parent->type);
   }
   else
   {
     cdef = he->data;
     var = cdef->var;
-    notify_name = cdef->name;
+    cst = cs_get_type_def(cs, he->type);
+  }
+
+  if (!cst)
+  {
+    mutt_debug(1, "Variable '%s' has an invalid type %d\n", cdef->name, he->type);
+    return CSR_ERR_CODE;
   }
 
   if (!var)
@@ -452,28 +433,39 @@ int cs_str_string_set(const struct ConfigSet *cs, const char *name,
     struct Inheritance *i = he->data;
     he->type = i->parent->type | DT_INHERITED;
   }
-  cs_notify_listeners(cs, he, notify_name, CE_SET);
+  cs_notify_listeners(cs, he, cdef->name, CE_SET);
   return CSR_SUCCESS;
 }
 
 /**
- * cs_reset_variable - Reset a config item to its initial value
- * @param cs   Config items
- * @param name Name of config item
- * @param err  Buffer for error messages
+ * cs_str_string_set - Set a config item by string
+ * @param cs    Config items
+ * @param name  Name of config item
+ * @param value Value to set
+ * @param err   Buffer for error messages
  * @retval int Result, e.g. #CSR_SUCCESS
  */
-int cs_reset_variable(const struct ConfigSet *cs, const char *name, struct Buffer *err)
+int cs_str_string_set(const struct ConfigSet *cs, const char *name,
+                      const char *value, struct Buffer *err)
 {
   if (!cs || !name)
     return CSR_ERR_CODE; /* LCOV_EXCL_LINE */
 
   struct HashElem *he = cs_get_elem(cs, name);
-  if (!he)
-  {
-    mutt_buffer_printf(err, "Unknown var '%s'", name);
-    return CSR_ERR_UNKNOWN;
-  }
+  return cs_he_string_set(cs, he, value, err);
+}
+
+/**
+ * cs_str_reset - Reset a config item to its initial value
+ * @param cs   Config items
+ * @param he   HashElem representing config item
+ * @param err  Buffer for error messages
+ * @retval int Result, e.g. #CSR_SUCCESS
+ */
+int cs_he_reset(const struct ConfigSet *cs, struct HashElem *he, struct Buffer *err)
+{
+  if (!cs || !he)
+    return CSR_ERR_CODE; /* LCOV_EXCL_LINE */
 
   /* An inherited var that's already pointing to its parent.
    * Return 'success', but don't send a notification. */
@@ -489,7 +481,7 @@ int cs_reset_variable(const struct ConfigSet *cs, const char *name, struct Buffe
     struct Inheritance *i = he->data;
     cst = cs_get_type_def(cs, i->parent->type);
     cdef = i->parent->data;
-    notify_name = name;
+    notify_name = cdef->name;
 
     if (cst && cst->destroy)
       cst->destroy(cs, (void **) &i->var, cdef);
@@ -508,6 +500,22 @@ int cs_reset_variable(const struct ConfigSet *cs, const char *name, struct Buffe
 
   cs_notify_listeners(cs, he, notify_name, CE_RESET);
   return CSR_SUCCESS;
+}
+
+/**
+ * cs_str_reset - Reset a config item to its initial value
+ * @param cs   Config items
+ * @param name Name of config item
+ * @param err  Buffer for error messages
+ * @retval int Result, e.g. #CSR_SUCCESS
+ */
+int cs_str_reset(const struct ConfigSet *cs, const char *name, struct Buffer *err)
+{
+  if (!cs || !name)
+    return CSR_ERR_CODE; /* LCOV_EXCL_LINE */
+
+  struct HashElem *he = cs_get_elem(cs, name);
+  return cs_he_reset(cs, he, err);
 }
 
 /**
@@ -922,5 +930,5 @@ int cs_set_initial_value(const struct ConfigSet *cs, const char *name,
   cdef->initial = IP mutt_str_strdup(value);
   he->type |= DT_INITIAL_SET;
 
-  return cs_reset_variable(cs, cdef->name, err);
+  return cs_he_reset(cs, he, err);
 }
