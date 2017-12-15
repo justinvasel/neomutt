@@ -1350,8 +1350,8 @@ struct Body *smime_build_smime_entity(struct Body *a, char *certlist)
   if (!smimeerr)
   {
     mutt_perror(smimeerrfile);
-    mutt_file_fclose(&fpout);
     mutt_file_unlink(tempfile);
+    mutt_file_fclose(&fpout);
     return NULL;
   }
   mutt_file_unlink(smimeerrfile);
@@ -1391,10 +1391,10 @@ struct Body *smime_build_smime_entity(struct Body *a, char *certlist)
   if ((thepid = smime_invoke_encrypt(&smimein, NULL, NULL, -1, fileno(fpout),
                                      fileno(smimeerr), smimeinfile, certfile)) == -1)
   {
+    mutt_file_unlink(tempfile);
+    mutt_file_fclose(&fpout);
     mutt_file_fclose(&smimeerr);
     mutt_file_unlink(smimeinfile);
-    mutt_file_unlink(certfile);
-    mutt_file_fclose(&fpout);
     return NULL;
   }
 
@@ -1402,7 +1402,6 @@ struct Body *smime_build_smime_entity(struct Body *a, char *certlist)
 
   mutt_wait_filter(thepid);
   mutt_file_unlink(smimeinfile);
-  mutt_file_unlink(certfile);
 
   fflush(fpout);
   rewind(fpout);
