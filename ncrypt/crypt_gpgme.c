@@ -3706,7 +3706,6 @@ static void print_key_info(gpgme_key_t key, FILE *fp)
   {
     /* L10N: value in Key Usage: field */
     fprintf(fp, "%s%s", delim, _("certification"));
-    delim = _(", ");
   }
   putc('\n', fp);
 
@@ -3842,7 +3841,6 @@ static void print_key_info(gpgme_key_t key, FILE *fp)
       if (subkey->can_certify)
       {
         fprintf(fp, "%s%s", delim, _("certification"));
-        delim = _(", ");
       }
       putc('\n', fp);
     }
