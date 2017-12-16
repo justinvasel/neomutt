@@ -3005,7 +3005,7 @@ int mutt_pager(const char *banner, const char *fname, int flags, struct Pager *e
           ch = -1;
           break;
         }
-      /* fall through */
+      /* fallthrough */
       case OP_SAVE:
         if (IsAttach(extra))
         {
@@ -3013,7 +3013,7 @@ int mutt_pager(const char *banner, const char *fname, int flags, struct Pager *e
                                     extra->hdr, NULL);
           break;
         }
-      /* fall through */
+      /* fallthrough */
       case OP_COPY_MESSAGE:
       case OP_DECODE_SAVE:
       case OP_DECODE_COPY:
